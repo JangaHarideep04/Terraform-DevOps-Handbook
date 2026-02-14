@@ -102,3 +102,30 @@ crash.*.log
 
 # IDE
 .idea/
+
+# Terraform State
+*.tfstate
+*.tfstate.*
+**/*.tfstate
+**/*.tfstate.*
+
+# Workspace State
+terraform.tfstate.d/
+**/terraform.tfstate.d/
+
+# Terraform Plugin Folder
+.terraform/
+
+# Private Keys
+*.pem
+*.key
+
+# Plans
+*.tfplan
+
+# Mac
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

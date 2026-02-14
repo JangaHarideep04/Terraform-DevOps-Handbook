@@ -7,6 +7,16 @@ terraform.tfstate.*
 # State Lock Files
 .terraform.lock.hcl
 
+# Private Keys and Certificates
+*.pem
+*.key
+*.pub
+*.ppk
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+
 # Terraform Directories
 .terraform/
 .terraform.d/

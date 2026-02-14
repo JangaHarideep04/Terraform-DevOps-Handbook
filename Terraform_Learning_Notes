@@ -1,0 +1,228 @@
+Terraform :
+
+
+There are 3 types of IAC tools aval in:
+ 
+ Configuration managament tool:
+
+ 1. Ansible- we can use ansible to create the servers and as IAC tool, but it is idempotent which means, suppose if there is an any resource already aval it wont create again, un like terraform, and the main purpose of this ansible is Configuration example, when yo need to install any package in other system, we can simple create an yaml and use ansible here to install that particular service in all other worker nodes from host node.
+
+ 2. puppet/chef: This is also do same purpose, but it is agent based, it works when we install agent in all other machines too, but the ansible can be work as agent less, so the host server has ansible and other has python installed it will work and best tool.
+
+
+Server templating tools: This are pre installed software like we can use AMI ids to create pre configured servers, but this are immutable once created we can't change, we have to create again another 
+Ex: Docker, Packer, Vagrant.
+
+Provising Tools: we can deploy the mutable infrastructure, can create servers, data bases, buckets anything. 
+Ex: Terraform, Cloud formation.
+
+
+*** Among all these Terraform is widely known and best IAC tool, that can able to use on any cloud providers like AWS, Azure, GCP... 
+
+
+* Cmds for Terraform :
+
+terraform init: It will initialiaze the environment required for terraform and also intialise the backend for state storage.
+
+terraform plan: It will tell what are the changes it will do, run this cmd before doing changes.
+
+terraform validate: it will validate the terraform code 
+
+terraform fmt : use to align the code properly and it will automatically apply the changes to get clean code.
+
+terrarorm apply: this cmd actually applying the changes we write in the code, after executing this cmd it will create state file terraform state file.
+
+terraform destroy: this will destroy the changes we made on infra, by one cmd.
+
+terraform appply -auto-approve: it will not ask again for confirmation to create changes.
+
+
+* Terraform RPC: it is main reason, to establish a communication in cloud provider and terraform, acts as bridge and do the communication to apply changes by in cloud provider.
+
+
+* Lifecyle: 
+
+prevent_destroy=true (which means even we run the cmd destroy, it will not destroy the resources, so it will help to prevent the destroy.)
+
+
+
+Terraform target: the target flag is used to apply or destroy specifi resource instead of entire configuration.
+
+terraform destroy-target=aws_instance.web
+
+
+
+***IMP***
+* Meta-argument: In terraform meta-arguments are special args that you can use inside any resource, module, or data block. they are not specific to a particular provider or resource type, 
+
+
+count, for_each: create or manage multiple resources.
+depends_on: Enforce creation order.
+lifecycle: Add custom behaviour rules.[
+---create_before_destroy]- ensure the terraform create a new resource before shutting down the exisited one, so this will reduce any downtime of applications.
+---ignore_changes= Tells the terraform to ignore the specific attribute updates during terraform apply.
+
+Provider: use diff provifer configs.
+
+
+*Parallelism : terraform performs up to 10 concurrent operations(in parallel), if we use it will create 10 instances at a time and then it will create other, so if we use parallelism it will create user specific number in parallel at a time.
+
+
+* Terraform replace : it deletes the old resource and replace with new one.
+
+Terraform refresh: it will update the state file with actual real-world infra state - without making any changes to the infra itself. The thing is it will change the values in the state file but not the original code. so it was deprecated now.
+
+drift detection: when we maually do any changes in the infra, then we use refresh only cmd it will compare the existing code with changes in infra and when we use terraform apply, it will automatically change the existing code to infra changes.
+
+
+* Terraform import: This is import the existing infra into code, suppose before you create any resources manually now you need to get the existing changes you can use this import to get the changes into code.
+Ex:
+provider "aws" {
+	region ="ap-south-1"
+}
+
+resource "aws_instance" "import-test" {
+  ami= "ami-0317b0f0a0144b137"
+    instance_type= "t3.micro"
+}
+
+
+
+import {
+    to = aws_instance.import-test
+    id = "i-0f3ba09dddbabee65"
+    
+
+}
+
+
+* Terraform Debugging options:
+
+TF_LOG Env Variable: It will display the logs behind the scene we can use Trace, Debug, Info, Warn, Error. and also we can give cmd to store the logs in seperate file.
+
+
+* Terraform state file and it's importance: It acts as source of truth, it will store all the information and detailed related to the infra and resource, so we have to store it in private because it has sensitive info, we can store this in S3 bucket. 
+
+Ex:
+terraform {
+  backend "s3" {
+    bucket = "harideep-test-bucket"
+    key = "terraform.tfstate"
+    region = "ap-south-1"
+    
+  }
+}
+
+
+*** EXEC: so this is very useful when we need to remote exec lets say the instance and install any packages through terraform on launching.
+
+Ex: provider "aws" {
+    region="ap-south-1"
+  
+}
+
+resource "aws_instance" "test_import"{
+    ami="ami-0317b0f0a0144b137"
+    instance_type = "t3.micro"
+    key_name = "Test1"
+    vpc_security_group_ids = ["sg-0a1d54e4e39ac674f"]
+
+    tags={
+        Name="Test-remote-exec"
+    }
+
+    connection {
+        type = "ssh"
+        user = "ec2-user"
+        private_key = file("/Users/harideepjanga/Downloads/Terraform/terraform exec/Test1.pem")
+        host = self.public_ip
+      
+    }
+
+    provisioner "remote-exec" {
+        inline = [ "sudo dnf install httpd -y",
+        "sudo systemctl start httpd", "sudo systemctl enable httpd" ]
+      
+    }
+
+
+}
+
+output "publicip" {
+    value = aws_instance.test_import.public_ip
+  
+}
+
+
+* Variables in terraform:  Variables used to pass the values and can be used any time any where, so instead of hard coding every value we can just create the variable block and pass the variable... for better and clean code. Best way is to write variables in seperate file (vars.tf)
+
+
+provider "aws"{
+	region="ap-south-1"
+}
+
+
+resource "aws_instance" "variables_test"{
+	ami=var.ami_id
+	instance_type= var.instance_type
+
+	tags ={
+	Name="variable_test"
+	}
+}
+
+
+varible "ami_id"{
+	type="string"
+	default="ami-0317b0f0a0144b137"
+
+}
+
+variable "instance_type"{
+	type= string
+	default= "t3.micro"
+}
+
+
+
+* Terraform workspace: Basically using of workspaces we can able to create diff workspace like for prod, dev, uat like that so when ever we want to implement the changes it will not reflect the other env, so when we do any changes it will destroy the existing like dev and create uat, so by using workspaces we can able to create diff... env and isolate the changes.
+
+cmds: terraform workspaces
+
+terraform init
+terraform workspace new dev
+terraform workspace new uat
+terraform workspace new prd
+terraform workspace select dev
+terraform plan
+terraform apply
+terraform apply -var-file=dev.tfvars/ same like other workspaces too.
+
+
+* Terraform Output: Basically outputs is used to show the outputs of the resources like we can show the output of instance public-ip, private-ip without gng to check in aws/ cloud providers.
+
+* Dynamic block: it is same as uses for_each and loop over. 
+
+* Data block: if we want to fetch the resources from the console, suppose we you need the get the ami_id's you can pull the ids and select from here without going and selecting from console.
+
+
+
+*** Terraform Modules: 
+
+Terraform modules help you to organze infrastructure code into a clean, scalable folder structure. it groups multiple resources into logical units that can be reused and shared across your org..
+
+
+Ex1: First file structure example.
+harideepjanga@Harideeps-MacBook-Air terraform_modules % tree
+.
+├── ec2
+│   ├── main.tf
+│   └── variables.tf
+├── main.tf
+├── s3
+│   ├── main.tf
+│   └── variables.tf
+├── terraform.tfstate
+└── terraform.tfstate.backup
+
+3 directories, 7 files
